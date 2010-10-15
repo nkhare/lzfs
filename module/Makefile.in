@@ -1,0 +1,59 @@
+# Makefile.in for lzfs module 
+
+MODULES := lzfs
+EXTRA_CFLAGS = @KERNELCPPFLAGS@
+EXTRA_CFLAGS += -include @SPL_OBJ@/spl_config.h
+
+# lzfs module
+obj-m := lzfs.o
+
+lzfs-objs += lzfs_super.o
+lzfs-objs += lzfs_vnops.o
+
+INSTALL=/usr/bin/install
+
+
+modules:
+	@# Make the exported ZFS symbols available to these modules.
+	@# They may be in the root of ZFS_OBJ when building against
+	@# installed devel headers, or they may be in the module
+	@# subdirectory when building against the spl source tree.
+	@if [ -f @ZFS_OBJ@/@ZFS_SYMBOLS@ ]; then \
+		/bin/cp @ZFS_OBJ@/@ZFS_SYMBOLS@ .; \
+	elif [ -f @ZFS_OBJ@/module/@ZFS_SYMBOLS@ ]; then \
+		/bin/cp @ZFS_OBJ@/module/@ZFS_SYMBOLS@ .; \
+	else \
+		echo -e "\n" \
+		"*** Missing spl symbols ensure you have built the spl:\n" \
+		"*** - @ZFS_OBJ@/@ZFS_SYMBOLS@, or\n" \
+		"*** - @ZFS_OBJ@/module/@ZFS_SYMBOLS@\n"; \
+		exit 1; \
+	fi
+	$(MAKE) -C @LINUX_OBJ@ SUBDIRS=`pwd` @KERNELMAKE_PARAMS@ $@
+
+clean:
+	$(MAKE) -C @LINUX_OBJ@ SUBDIRS=`pwd` @KERNELMAKE_PARAMS@ $@
+	if [ -f @ZFS_SYMBOLS@ ]; then $(RM) @ZFS_SYMBOLS@; fi
+	if [ -f @LINUX_SYMBOLS@ ]; then $(RM) @LINUX_SYMBOLS@; fi
+	if [ -f Module.markers ]; then $(RM) Module.markers; fi
+
+modules_install:
+	$(MAKE) -C @LINUX_OBJ@ SUBDIRS=`pwd` \
+		INSTALL_MOD_PATH=$(DESTDIR) \
+		INSTALL_MOD_DIR=addon/lzfs $@
+	find ${DESTDIR}/lib/modules/ -name 'modules.*' | xargs ${RM}
+	sysmap=${DESTDIR}/boot/System.map-@LINUX_VERSION@; \
+        if [ -f $$sysmap ]; then \
+                depmod -ae -F $$sysmap @LINUX_VERSION@; \
+        fi
+
+modules_uninstall:
+	@# Uninstall the kernel modules
+	$(RM) -R $(DESTDIR)/lib/modules/@LINUX_VERSION@/addon/lzfs
+
+distdir:
+
+distclean maintainer-clean: clean
+install: modules_install
+all: modules
+check:
