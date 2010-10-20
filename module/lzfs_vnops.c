@@ -638,7 +638,7 @@ lzfs_vnop_read (struct file *filep, char __user *buf, size_t len, loff_t *ppos)
 {
 	struct iovec iov = { .iov_base = buf, .iov_len = len };
 	int err;
-	const struct cred *cred = get_current_cred();
+	const cred_t *cred = get_current_cred();
 	vnode_t *vp = NULL;
 	uio_t uio;
 	loff_t isize;
@@ -806,9 +806,7 @@ no_cached_page:
 out:
 //	*ppos = ((loff_t)index << PAGE_CACHE_SHIFT) + offset;
 
-/*	Commenting for now . Need to after merging 
 	zfs_file_accessed(vp);
-*/
 	put_cred(cred);
 	tsd_exit();
 	SEXIT;
@@ -836,7 +834,7 @@ ssize_t lzfs_write(vnode_t *vp, unsigned int file_flags,
 		const char *buf, ssize_t len, loff_t pos, uio_seg_t segment)
 {
 	uio_t uio;
-    	const struct cred *cred = get_current_cred();
+	const cred_t *cred = get_current_cred();
 	struct iovec iov;
 	int err;
 
@@ -952,9 +950,8 @@ lzfs_vnop_write (struct file *filep, const char __user *buf, size_t len,
 //		set_page_dirty(page);
 		unlock_page(page);
 		page_cache_release(page);
-/*	Commenting for now . Need to after merging 
 		zfs_file_modified(vp);
-*/
+
 		balance_dirty_pages_ratelimited(mapping);
 
 		user_buf += size;
@@ -1086,7 +1083,7 @@ const struct file_operations zfs_dir_file_operations = {
 
 static int lzfs_readpage(struct file *file, struct page *page)
 {
-    const struct cred *cred = get_current_cred();
+    const cred_t *cred  = get_current_cred();
     struct inode *inode = NULL;
     loff_t i_size       = 0;
     loff_t offset       = 0;
